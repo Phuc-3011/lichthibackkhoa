@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>myBK Lịch Thi → iPhone Calendar</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-dark: #1557b0;
+    --success: #34a853;
+    --danger: #ea4335;
+    --warning: #fbbc04;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #202124;
+    --text-secondary: #5f6368;
+    --border: #dadce0;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--primary), #4285f4);
+    color: white;
+    padding: 20px 16px 24px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .header p {
+    font-size: 13px;
+    opacity: 0.9;
+  }
+
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid var(--border);
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .icon {
+    font-size: 20px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    resize: vertical;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+    background: #fafafa;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: white;
+  }
+  textarea::placeholder {
+    color: #aaa;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-style: italic;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    width: 100%;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+
+  .btn-parse {
+    background: linear-gradient(135deg, #34a853, #2d9248);
+    color: white;
+  }
+  .btn-parse:hover:not(:disabled) { background: linear-gradient(135deg, #2d9248, #267a3d); }
+
+  .btn-ics {
+    background: linear-gradient(135deg, #ea4335, #d33426);
+    color: white;
+  }
+  .btn-ics:hover:not(:disabled) { background: linear-gradient(135deg, #d33426, #c22d20); }
+
+  .btn-gcal {
+    background: linear-gradient(135deg, #4285f4, #3b78e7);
+    color: white;
+  }
+  .btn-gcal:hover:not(:disabled) { background: linear-gradient(135deg, #3b78e7, #3367d6); }
+
+  .btn-outline {
+    background: white;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+  }
+
+  .btn-sm {
+    padding: 8px 14px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  /* Preview Table */
+  .preview-section {
+    display: none;
+  }
+  .preview-section.show { display: block; }
+
+  .exam-card {
+    background: white;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .exam-card.gk { border-left-color: var(--warning); }
+  .exam-card.ck { border-left-color: var(--danger); }
+
+  .exam-name {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .exam-code {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  .exam-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .exam-detail {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .exam-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    margin-left: 6px;
+  }
+  .badge-gk { background: var(--warning); color: #333; }
+  .badge-ck { background: var(--danger); }
+
+  .summary-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #e8f0fe;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--primary-dark);
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+  .settings-row label {
+    font-size: 14px;
+    color: var(--text);
+  }
+  .settings-row select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    background: white;
+  }
+
+  .status-msg {
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 10px;
+    display: none;
+  }
+  .status-msg.show { display: block; }
+  .status-msg.success { background: #e6f4ea; color: #1e7e34; }
+  .status-msg.error { background: #fce8e6; color: #c5221f; }
+
+  .footer {
+    text-align: center;
+    padding: 20px 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .sample-btn {
+    font-size: 12px;
+    color: var(--primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    margin-top: 6px;
+  }
+
+  /* Scroll animation */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .exam-card { animation: fadeIn 0.3s ease-out; }
+
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .gcal-links { margin-top: 10px; }
+  .gcal-link-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #f0f4ff;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.2s;
+  }
+  .gcal-link-item:hover { background: #dce5ff; }
+  .gcal-link-item .gcal-name { flex: 1; font-weight: 500; }
+  .gcal-link-item .gcal-arrow { color: var(--primary); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="inAppWarning" style="display:none; background:#ff4444; color:white; padding:12px 16px; font-size:13px; font-weight:600; text-align:center; line-height:1.4;">
+  ⚠️ Bạn đang mở trong ứng dụng Zalo/Messenger!<br>
+  Hãy bấm dấu <b>(...)</b> hoặc <b>Chia sẻ</b> ở góc màn hình → chọn <b>"Mở bằng trình duyệt Safari"</b> thì mới tải và thêm vào Lịch được.
+</div>
+
+<script>
+  (function() {
+    var ua = navigator.userAgent || navigator.vendor || window.opera;
+    if (/FBAN|FBAV|Instagram|Line|MicroMessenger|Zalo|Messenger/i.test(ua)) {
+      document.addEventListener("DOMContentLoaded", function() {
+        var warn = document.getElementById("inAppWarning");
+        if (warn) warn.style.display = "block";
+      });
+    }
+  })();
+</script>
+
+<div class="header">
+  <h1>📅 myBK Lịch Thi → Calendar</h1>
+  <p>Dán lịch thi từ myBK, tải file .ics cho iPhone</p>
+</div>
+
+<div class="container">
+
+  <!-- Step 1: Input -->
+  <div class="card">
+    <div class="card-title">
+      <span class="step-number">1</span>
+      Dán nội dung lịch thi từ myBK
+    </div>
+    <textarea id="inputText" placeholder="Vào myBK → Lịch thi → Bôi đen toàn bộ bảng lịch thi → Copy → Dán vào đây...
+
+Ví dụ:
+20261	ME2179 - Hệ truyền động điện	CC02_B_Thi	2026-12-14	CK	BK-CS1	B4-402	2	07g00	70	..."></textarea>
+    <p class="hint">💡 Trên myBK, bôi đen toàn bộ bảng lịch thi (bao gồm cả dòng tiêu đề nếu có), rồi Ctrl+C, sau đó Ctrl+V (dán) vào ô trên.</p>
+    <button class="sample-btn" onclick="loadSample()">📋 Xem dữ liệu mẫu</button>
+  </div>
+
+  <!-- Step 2: Parse -->
+  <div class="card">
+    <div class="card-title">
+      <span class="step-number">2</span>
+      Phân tích lịch thi
+    </div>
+    <button class="btn btn-parse" id="btnParse" onclick="parseExams()">
+      🔍 Phân tích lịch thi
+    </button>
+    <div id="statusMsg" class="status-msg"></div>
+  </div>
+
+  <!-- Preview -->
+  <div id="previewSection" class="preview-section">
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">📋</span>
+        Xem trước lịch thi
+      </div>
+      <div id="summaryBar" class="summary-bar"></div>
+      <div id="examList"></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">⚙️</span>
+        Cài đặt nhắc nhở
+      </div>
+      <div class="settings-row">
+        <label>⏰ Nhắc nhở trước giờ thi</label>
+        <select id="alarmSelect">
+          <option value="30">30 phút</option>
+          <option value="60">1 giờ</option>
+          <option value="120" selected>2 giờ</option>
+          <option value="1440">1 ngày</option>
+          <option value="2880">2 ngày</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label>⏰ Nhắc nhở thứ 2 (tùy chọn)</label>
+        <select id="alarm2Select">
+          <option value="0">Không</option>
+          <option value="30">30 phút</option>
+          <option value="60">1 giờ</option>
+          <option value="120">2 giờ</option>
+          <option value="1440" selected>1 ngày</option>
+          <option value="2880">2 ngày</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Step 3: Download -->
+    <div class="card">
+      <div class="card-title">
+        <span class="step-number">3</span>
+        Tải xuống / Thêm vào lịch
+      </div>
+      <div class="actions">
+        <button class="btn btn-ics" onclick="downloadICS()">
+          🍎 Tải file .ics (iPhone / Apple Calendar)
+        </button>
+        <button class="btn btn-gcal" onclick="toggleGCalLinks()">
+          📆 Thêm vào Google Calendar
+        </button>
+      </div>
+      <div id="gcalLinksContainer" class="gcal-links" style="display:none;"></div>
+      <p class="hint" style="margin-top:12px">
+        📱 <strong>iPhone:</strong> Bấm "Tải file .ics" → Safari sẽ hỏi "Bạn có muốn thêm sự kiện vào Lịch?" → Bấm "Thêm tất cả".<br>
+        💻 <strong>Google Calendar:</strong> Bấm vào từng môn để mở trực tiếp trên Google Calendar.
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>🎓 Công cụ hỗ trợ sinh viên HCMUT (BK)</p>
+    <p>Dữ liệu được xử lý hoàn toàn trên thiết bị của bạn, không gửi đi đâu cả.</p>
+  </div>
+</div>
+
+<script>
+// ===== GLOBAL STATE =====
+let parsedExams = [];
+
+// ===== SAMPLE DATA =====
+function loadSample() {
+  document.getElementById('inputText').value = `20261\tME2179 - Hệ truyền động điện\tCC02_B_Thi\t2026-12-14\tCK\tBK-CS1\tB4-402\t2\t07g00\t70\t2026-10-23 10:10:00
+20261\tAS2071 - Cơ học kỹ thuật\tCC03_B_Ktr\t2026-10-12\tGK\tBK-CS1\tB1-212\t2\t09g00\t60\t2026-09-21 14:09:00
+20261\tME2091 - Phương pháp số\tCC04_B_Thi\t2026-12-28\tCK\tBK-CS1\tB1-213\t2\t09g30\t90\t2026-10-23 10:10:00
+20261\tCO1003 - Nhập môn về Lập trình\tCC02_B_Thi\t2026-12-15\tCK\tBK-CS1\tB4-402\t3\t13g00\t90\t2026-10-23 10:10:00
+20261\tSP1031 - Triết học Mác - Lênin\tCC06_A_Thi\t2026-12-22\tCK\tBK-CS1\tC4-402\t3\t13g00\t50\t2026-10-23 10:10:00
+20261\tAS2071 - Cơ học kỹ thuật\tCC03_B_Thi\t2026-12-24\tCK\tBK-CS1\tB4-406\t5\t15g30\t90\t2026-10-23 10:10:00`;
+  showStatus('Đã tải dữ liệu mẫu. Bấm "Phân tích lịch thi" để tiếp tục.', 'success');
+}
+
+// ===== PARSER =====
+function parseExams() {
+  const raw = document.getElementById('inputText').value.trim();
+  if (!raw) {
+    showStatus('⚠️ Vui lòng dán nội dung lịch thi vào ô bên trên.', 'error');
+    return;
+  }
+
+  parsedExams = [];
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+  for (const line of lines) {
+    // Skip header lines
+    if (/^Học kỳ/i.test(line) || /^Trình bày/i.test(line) || /^Tìm kiếm/i.test(line) || line.length < 10) continue;
+
+    // Try to parse tab-separated or multi-space-separated
+    let cols = line.split('\t');
+    if (cols.length < 8) {
+      // Try splitting by 2+ spaces
+      cols = line.split(/\s{2,}/);
+    }
+    if (cols.length < 8) continue;
+
+    // Find the date column (YYYY-MM-DD)
+    let dateIdx = -1;
+    for (let i = 0; i < cols.length; i++) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cols[i].trim())) {
+        dateIdx = i;
+        break;
+      }
+    }
+    if (dateIdx < 0) continue;
+
+    // Extract fields relative to date position
+    const semester = cols[0].trim();
+    const subjectRaw = cols[1].trim(); // e.g. "ME2179 - Hệ truyền động điện"
+    const classGroup = cols[2].trim();
+    const dateStr = cols[dateIdx].trim();
+    const examType = cols[dateIdx + 1] ? cols[dateIdx + 1].trim() : '';
+    const campus = cols[dateIdx + 2] ? cols[dateIdx + 2].trim() : '';
+    const room = cols[dateIdx + 3] ? cols[dateIdx + 3].trim() : '';
+    // day-of-week column (Thứ) – skipped, we derive from date
+    const timeStr = cols[dateIdx + 5] ? cols[dateIdx + 5].trim() : '';
+    const durationStr = cols[dateIdx + 6] ? cols[dateIdx + 6].trim() : '';
+
+    // Parse subject code and name
+    let subjectCode = '', subjectName = '';
+    const subjMatch = subjectRaw.match(/^([A-Z]{2}\d{4})\s*[-–]\s*(.+)$/);
+    if (subjMatch) {
+      subjectCode = subjMatch[1];
+      subjectName = subjMatch[2].trim();
+    } else {
+      subjectName = subjectRaw;
+    }
+
+    // Parse time: "07g00", "09g30", "13g00", "07:00", "09:30"
+    let hours = 0, minutes = 0;
+    const timeMatch = timeStr.match(/(\d{1,2})[g:hH](\d{2})/);
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1]);
+      minutes = parseInt(timeMatch[2]);
+    } else {
+      continue; // Can't parse time, skip
+    }
+
+    // Parse duration
+    const duration = parseInt(durationStr) || 60;
+
+    // Parse date
+    const dateParts = dateStr.split('-');
+    if (dateParts.length !== 3) continue;
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1;
+    const day = parseInt(dateParts[2]);
+
+    // Exam type label
+    let examTypeLabel = examType;
+    if (examType === 'GK') examTypeLabel = 'Giữa kỳ';
+    else if (examType === 'CK') examTypeLabel = 'Cuối kỳ';
+
+    const startDate = new Date(year, month, day, hours, minutes, 0);
+    const endDate = new Date(startDate.getTime() + duration * 60000);
+
+    parsedExams.push({
+      semester,
+      subjectCode,
+      subjectName,
+      classGroup,
+      date: dateStr,
+      examType,
+      examTypeLabel,
+      campus,
+      room,
+      startDate,
+      endDate,
+      duration,
+      timeStr
+    });
+  }
+
+  if (parsedExams.length === 0) {
+    showStatus('❌ Không tìm thấy môn thi nào. Vui lòng kiểm tra lại dữ liệu đã dán.', 'error');
+    return;
+  }
+
+  // Sort by date
+  parsedExams.sort((a, b) => a.startDate - b.startDate);
+
+  showStatus(`✅ Đã tìm thấy ${parsedExams.length} môn thi!`, 'success');
+  renderPreview();
+}
+
+// ===== RENDER PREVIEW =====
+function renderPreview() {
+  const section = document.getElementById('previewSection');
+  const list = document.getElementById('examList');
+  const summary = document.getElementById('summaryBar');
+
+  const gkCount = parsedExams.filter(e => e.examType === 'GK').length;
+  const ckCount = parsedExams.filter(e => e.examType === 'CK').length;
+  summary.innerHTML = `<span>📚 ${parsedExams.length} môn thi</span><span>GK: ${gkCount} | CK: ${ckCount}</span>`;
+
+  list.innerHTML = '';
+  for (const exam of parsedExams) {
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const dayName = dayNames[exam.startDate.getDay()];
+    const dateDisplay = `${dayName}, ${exam.startDate.getDate().toString().padStart(2,'0')}/${(exam.startDate.getMonth()+1).toString().padStart(2,'0')}/${exam.startDate.getFullYear()}`;
+    const startTime = `${exam.startDate.getHours().toString().padStart(2,'0')}:${exam.startDate.getMinutes().toString().padStart(2,'0')}`;
+    const endTime = `${exam.endDate.getHours().toString().padStart(2,'0')}:${exam.endDate.getMinutes().toString().padStart(2,'0')}`;
+
+    const card = document.createElement('div');
+    card.className = `exam-card ${exam.examType.toLowerCase()}`;
+    card.innerHTML = `
+      <div class="exam-name">
+        ${exam.subjectName}
+        <span class="exam-badge badge-${exam.examType.toLowerCase()}">${exam.examTypeLabel}</span>
+        <div class="exam-code">${exam.subjectCode} · ${exam.classGroup}</div>
+      </div>
+      <div class="exam-details">
+        <div class="exam-detail">📅 ${dateDisplay}</div>
+        <div class="exam-detail">🕐 ${startTime} - ${endTime}</div>
+        <div class="exam-detail">🏫 ${exam.room}</div>
+        <div class="exam-detail">📍 ${exam.campus}</div>
+        <div class="exam-detail">⏱️ ${exam.duration} phút</div>
+      </div>
+    `;
+    list.appendChild(card);
+  }
+
+  section.classList.add('show');
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ===== ICS GENERATION =====
+function generateICS() {
+  const alarm1 = parseInt(document.getElementById('alarmSelect').value);
+  const alarm2 = parseInt(document.getElementById('alarm2Select').value);
+
+  let ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//myBK Exam Calendar//HCMUT//VI',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:Lịch Thi HCMUT',
+    'X-WR-TIMEZONE:Asia/Ho_Chi_Minh',
+    // Timezone definition
+    'BEGIN:VTIMEZONE',
+    'TZID:Asia/Ho_Chi_Minh',
+    'BEGIN:STANDARD',
+    'DTSTART:19700101T000000',
+    'TZOFFSETFROM:+0700',
+    'TZOFFSETTO:+0700',
+    'TZNAME:ICT',
+    'END:STANDARD',
+    'END:VTIMEZONE',
+  ];
+
+  for (const exam of parsedExams) {
+    const uid = `${exam.subjectCode}-${exam.examType}-${exam.date}@mybk-hcmut`;
+    const now = formatDateICS(new Date());
+
+    const summary = `[${exam.examTypeLabel}] ${exam.subjectName} (${exam.subjectCode})`;
+    const location = `${exam.room}, ${exam.campus}`;
+    const description = [
+      `Môn: ${exam.subjectCode} - ${exam.subjectName}`,
+      `Loại: Thi ${exam.examTypeLabel}`,
+      `Nhóm: ${exam.classGroup}`,
+      `Thời lượng: ${exam.duration} phút`,
+      `Phòng: ${exam.room}`,
+      `Cơ sở: ${exam.campus}`,
+    ].join('\\n');
+
+    ics.push('BEGIN:VEVENT');
+    ics.push(`UID:${uid}`);
+    ics.push(`DTSTAMP:${now}`);
+    ics.push(`DTSTART;TZID=Asia/Ho_Chi_Minh:${formatDateLocal(exam.startDate)}`);
+    ics.push(`DTEND;TZID=Asia/Ho_Chi_Minh:${formatDateLocal(exam.endDate)}`);
+    ics.push(`SUMMARY:${summary}`);
+    ics.push(`LOCATION:${location}`);
+    ics.push(`DESCRIPTION:${description}`);
+    ics.push('STATUS:CONFIRMED');
+
+    // Alarm 1
+    if (alarm1 > 0) {
+      ics.push('BEGIN:VALARM');
+      ics.push('TRIGGER:-PT' + alarm1 + 'M');
+      ics.push('ACTION:DISPLAY');
+      ics.push(`DESCRIPTION:⏰ Còn ${formatAlarmText(alarm1)} nữa thi ${exam.subjectName} tại ${exam.room}`);
+      ics.push('END:VALARM');
+    }
+
+    // Alarm 2
+    if (alarm2 > 0) {
+      ics.push('BEGIN:VALARM');
+      ics.push('TRIGGER:-PT' + alarm2 + 'M');
+      ics.push('ACTION:DISPLAY');
+      ics.push(`DESCRIPTION:📚 Còn ${formatAlarmText(alarm2)} nữa thi ${exam.subjectName}`);
+      ics.push('END:VALARM');
+    }
+
+    ics.push('END:VEVENT');
+  }
+
+  ics.push('END:VCALENDAR');
+  return ics.join('\r\n');
+}
+
+function formatDateICS(d) {
+  // UTC format: YYYYMMDDTHHmmssZ
+  return d.getUTCFullYear().toString() +
+    (d.getUTCMonth()+1).toString().padStart(2,'0') +
+    d.getUTCDate().toString().padStart(2,'0') + 'T' +
+    d.getUTCHours().toString().padStart(2,'0') +
+    d.getUTCMinutes().toString().padStart(2,'0') +
+    d.getUTCSeconds().toString().padStart(2,'0') + 'Z';
+}
+
+function formatDateLocal(d) {
+  // Local format: YYYYMMDDTHHmmss (no Z)
+  return d.getFullYear().toString() +
+    (d.getMonth()+1).toString().padStart(2,'0') +
+    d.getDate().toString().padStart(2,'0') + 'T' +
+    d.getHours().toString().padStart(2,'0') +
+    d.getMinutes().toString().padStart(2,'0') +
+    d.getSeconds().toString().padStart(2,'0');
+}
+
+function formatAlarmText(mins) {
+  if (mins >= 1440) return (mins / 1440) + ' ngày';
+  if (mins >= 60) return (mins / 60) + ' giờ';
+  return mins + ' phút';
+}
+
+// ===== DOWNLOAD ICS =====
+function downloadICS() {
+  if (parsedExams.length === 0) {
+    showStatus('⚠️ Chưa có dữ liệu. Vui lòng phân tích lịch thi trước.', 'error');
+    return;
+  }
+
+  const icsContent = generateICS();
+  const filename = `lich-thi-hcmut-${parsedExams[0].semester}.ics`;
+
+  // Check if opened inside in-app browser (Zalo, Messenger, FB)
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  const isInApp = /FBAN|FBAV|Instagram|Line|MicroMessenger|Zalo|Messenger/i.test(ua);
+  if (isInApp) {
+    alert('⚠️ Bạn đang mở trong Zalo/Messenger nên iPhone chặn tải file!\n\nHãy bấm vào dấu 3 chấm (...) ở góc màn hình → chọn "Mở bằng trình duyệt Safari" để thêm vào Lịch nhé!');
+    return;
+  }
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (isIOS) {
+    // Trên iOS Safari: dùng data URI với base64 để Safari tự động bật popup "Thêm vào Lịch" trực tiếp
+    try {
+      const base64Data = btoa(unescape(encodeURIComponent(icsContent)));
+      const dataUri = 'data:text/calendar;charset=utf-8;base64,' + base64Data;
+      
+      const link = document.createElement('a');
+      link.href = dataUri;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Dự phòng nếu link click không kích hoạt trên Safari
+      setTimeout(() => {
+        window.location.href = dataUri;
+      }, 300);
+
+      showStatus('✅ Đang mở Lịch trên iPhone! Bấm "Thêm tất cả" khi hiện thông báo.', 'success');
+      return;
+    } catch (e) {
+      console.warn('Fallback Blob for iOS', e);
+    }
+  }
+
+  // Phương thức tải chuẩn cho Safari / Chrome / Máy tính
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  
+  // KHÔNG revokeObjectURL ngay lập tức vì Safari cần thời gian đọc Blob
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 10000);
+
+  showStatus('✅ Đã tải file .ics! Trên iPhone, bấm vào file vừa tải → chọn "Thêm tất cả".', 'success');
+}
+
+// ===== GOOGLE CALENDAR LINKS =====
+function toggleGCalLinks() {
+  const container = document.getElementById('gcalLinksContainer');
+  if (container.style.display === 'none') {
+    if (parsedExams.length === 0) {
+      showStatus('⚠️ Chưa có dữ liệu. Vui lòng phân tích lịch thi trước.', 'error');
+      return;
+    }
+    renderGCalLinks();
+    container.style.display = 'block';
+  } else {
+    container.style.display = 'none';
+  }
+}
+
+function renderGCalLinks() {
+  const container = document.getElementById('gcalLinksContainer');
+  container.innerHTML = '<p style="font-size:12px;color:#666;margin-bottom:8px;">Bấm vào từng môn để mở Google Calendar (mỗi môn một link riêng):</p>';
+
+  for (const exam of parsedExams) {
+    const title = encodeURIComponent(`[${exam.examTypeLabel}] ${exam.subjectName} (${exam.subjectCode})`);
+    const location = encodeURIComponent(`${exam.room}, ${exam.campus}`);
+    const details = encodeURIComponent(
+      `Môn: ${exam.subjectCode} - ${exam.subjectName}\n` +
+      `Loại: Thi ${exam.examTypeLabel}\n` +
+      `Nhóm: ${exam.classGroup}\n` +
+      `Thời lượng: ${exam.duration} phút\n` +
+      `Phòng: ${exam.room}\n` +
+      `Cơ sở: ${exam.campus}`
+    );
+
+    // Google Calendar uses UTC time format
+    const startUTC = formatDateICS(exam.startDate);
+    const endUTC = formatDateICS(exam.endDate);
+
+    // Actually Google Calendar URL uses local time with timezone parameter
+    const startLocal = formatDateLocal(exam.startDate);
+    const endLocal = formatDateLocal(exam.endDate);
+
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startLocal}/${endLocal}&ctz=Asia/Ho_Chi_Minh&location=${location}&details=${details}`;
+
+    const badgeClass = exam.examType === 'GK' ? 'badge-gk' : 'badge-ck';
+
+    const link = document.createElement('a');
+    link.className = 'gcal-link-item';
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.innerHTML = `
+      <span class="exam-badge ${badgeClass}">${exam.examTypeLabel}</span>
+      <span class="gcal-name">${exam.subjectName}</span>
+      <span style="color:#888;font-size:12px">${exam.date}</span>
+      <span class="gcal-arrow">→</span>
+    `;
+    container.appendChild(link);
+  }
+}
+
+// ===== STATUS MESSAGE =====
+function showStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = `status-msg show ${type}`;
+  setTimeout(() => {
+    if (el.textContent === msg) el.classList.remove('show');
+  }, 8000);
+}
+</script>
+
+</body>
+</html>
